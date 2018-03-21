@@ -10,6 +10,7 @@
 (hash-set! *mime-types* "css" '("text" . "css"))
 (hash-set! *mime-types* "txt" '("text" . "plain"))
 (hash-set! *mime-types* "html" '("text" . "html"))
+(hash-set! *mime-types* "js" '("text" . "javascript"))
 (hash-set! *mime-types* "png" '("image" . "png"))
 (hash-set! *mime-types* "jpg" '("image" . "jpeg"))
 (hash-set! *mime-types* "jpeg" '("image" . "jpeg"))
