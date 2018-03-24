@@ -4,6 +4,7 @@
              (web uri))
 (use-modules (ice-9 rdelim))
 (use-modules (ice-9 binary-ports))
+(use-modules (ice-9 regex))
 
 ;;;-------------------------------------------------
 (define *mime-types* (make-hash-table 31))
@@ -35,7 +36,7 @@
 ;;;-------------------------------------------------
 
 
-
+;;;because I have problems with LET :)
 (define (cases request body file-name)
   (cond ((equal? (request-path-components request) '("duude"))
 	 (values '((content-type . (text/plain))) "Hello duude!"))
@@ -60,18 +61,18 @@
   )
 
 
-(define (no-first-character str)
-  (substring str 1 (string-length str)))
+(define (revove-from-string str regex)
+  (regexp-substitute #f (string-match regex str) 'pre "" 'post))
 
 
 (define (hello-hacker-handler request body)
   (display "\n-------------\n")
-  (display (no-first-character (uri->string (request-uri request))))
+  (display (revove-from-string (uri->string (request-uri request)) "http.?:/"))
   ;;;(display (string? (no-first-character (uri->string (request-uri request)))))
   (display "\n+++++++++++++\n")
 
 
-  (cases request body (no-first-character (uri->string (request-uri request)))  )
+  (cases request body (revove-from-string (uri->string (request-uri request)) "http.?:/")  )
 
 
   )
