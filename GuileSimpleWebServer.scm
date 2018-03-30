@@ -1,86 +1,37 @@
-(use-modules (web server)) 
-(use-modules (web request)
-             (web response)
-             (web uri))
-(use-modules (ice-9 rdelim))
-(use-modules (ice-9 binary-ports))
-(use-modules (ice-9 regex))
+(add-to-load-path (dirname (current-filename)))
 
-;;;-------------------------------------------------
-(define *mime-types* (make-hash-table 31))
-(hash-set! *mime-types* "css" '("text" . "css"))
-(hash-set! *mime-types* "txt" '("text" . "plain"))
-(hash-set! *mime-types* "html" '("text" . "html"))
-(hash-set! *mime-types* "js" '("text" . "javascript"))
-(hash-set! *mime-types* "png" '("image" . "png"))
-(hash-set! *mime-types* "jpg" '("image" . "jpeg"))
-(hash-set! *mime-types* "jpeg" '("image" . "jpeg"))
-(hash-set! *mime-types* "gif" '("image" . "gif"))
+(use-modules (web server)
+	     (web request)
+	     (web response)
+	     (web uri)
+	     (ice-9 threads))
 
-(define (mime-type-ref file-name)
-  (let* ((dot-position (string-rindex file-name #\.))
-         (extension (and dot-position
-                         (string-copy file-name (+ dot-position 1))))
-         (mime-type (and dot-position
-                         (hash-ref *mime-types* extension))))
-    (if mime-type mime-type '("application" . "octet-stream"))))
-
-(define (mime-type-symbol mime-type)
-  (string->symbol (string-append (car mime-type) "/" (cdr mime-type))))
-
-(define (text-mime-type? mime-type)
-  (if (equal? (car mime-type) "text") #t #f))
-
-(define (request-path-components request)
+(define (request-path request)
   (split-and-decode-uri-path (uri-path (request-uri request))))
-;;;-------------------------------------------------
 
 
-;;;because I have problems with LET :)
-(define (cases request body file-name)
-  (cond ((equal? (request-path-components request) '("duude"))
-	 (values '((content-type . (text/plain))) "Hello duude!"))
-	((file-exists? file-name)
-	 (display "resource .. ok")
-	 (let* ((mime-type (mime-type-ref (uri->string (request-uri request))))
-		(mime-type-symbol (mime-type-symbol mime-type)))
-	   (if (text-mime-type? mime-type)
-	       (values
-		`((content-type . (,mime-type-symbol)))
-		(lambda (out-port)
-		  (call-with-input-file file-name
-		    (lambda (in-port)
-		      (display (read-delimited "" in-port)
-			       out-port)))))
-	       (values
-		`((content-type . (,mime-type-symbol)))
-		(call-with-input-file file-name
-		  (lambda (in-port)
-		    (get-bytevector-all in-port)))))))
-	(else (not-found request)))
-  )
+(define (request-query-string request)
+  (split-and-decode-uri-path (uri-query (request-uri request))))
 
 
-(define (revove-from-string str regex)
-  (regexp-substitute #f (string-match regex str) 'pre "" 'post))
-
-
-(define (hello-hacker-handler request body)
-  (display "\n-------------\n")
-  (display (revove-from-string (uri->string (request-uri request)) "http.?:/"))
-  ;;;(display (string? (no-first-character (uri->string (request-uri request)))))
-  (display "\n+++++++++++++\n")
-
-
-  (cases request body (revove-from-string (uri->string (request-uri request)) "http.?:/")  )
-
-
-  )
-
-(define (not-found request)
+(define (code-404 request)
   (values (build-response #:code 404)
-          (string-append "Resource not found: "
-                         (uri->string (request-uri request)))))
+	  (string-append
+	   (uri->string (request-uri request))
+	   "\n"
+	   "404 Resource Not Found !\n")))
 
-(run-server hello-hacker-handler)
+(define (handle-custom-requests request body)
+  (cond
+   ((equal? (request-path request) '("hello"))
+    (values '((content-type . (text/plain))) "Hello there!"))
+   ((equal? (request-path request) '("quit"))
+    (values '((content-type . (text/plain))) "Try to quit!"))
+   (else (code-404 request))))
 
+
+(define (custom-handler request body)
+  (handle-custom-requests request body))
+
+(define server-thread (make-thread run-server custom-handler))
+(begin-thread server-thread)   
