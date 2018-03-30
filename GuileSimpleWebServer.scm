@@ -33,5 +33,6 @@
 (define (custom-handler request body)
   (handle-custom-requests request body))
 
-(define server-thread (make-thread run-server custom-handler))
-(begin-thread server-thread)   
+;;(define server-thread (make-thread run-server custom-handler))
+;;(begin-thread server-thread)   
+(run-server custom-handler)
