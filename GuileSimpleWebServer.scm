@@ -30,51 +30,44 @@
 	   "\n"
 	   "404 Resource Not Found !\n")))
 
+
+					; linux case is tested
+					; Unix , Cygwin and others .. are 'Hail Mary' cases :D
+(define (get-file-name request)
+  (cond ((not (equal? (string-match "[Ll][Ii][Nn][Uu][Xx]" (utsname:sysname (uname))) #f))
+	 (revove-from-string (uri->string (request-uri request)) "/"))
+	((not (equal? (string-match "[Uu][Nn][Ii][Xx]" (utsname:sysname (uname))) #f))
+	 (revove-from-string (uri->string (request-uri request)) "/"))
+	((not (equal? (string-match "[Cc][Yy][Gg][Ww][Ii][Nn]" (utsname:sysname (uname))) #f))
+	 (revove-from-string (uri->string (request-uri request)) "http.?:/"))
+	(else (uri->string (request-uri request)))))
+	 
 (define (handle-custom-requests request body)
-					; TODO ... remove code duplication for CYGWIN or LINUX
-					; in cygwin file name has "http[s]:/" prefix
-					; in Parabola Gnu/Linux Libre (hasta la victoria siempre) ;) ... the file name has "/" prefix
-					; have to learn and practice more :D
-  (let ((file-name-cyqwin (revove-from-string (uri->string (request-uri request)) "http.?:/"))
-	(file-name-linux (revove-from-string (uri->string (request-uri request)) "/")))
+  (let ((file-name (get-file-name request)))
+
+					; keep printline debuging for a while
+    (display "\nDBG -> If file name has any prefix ['/', 'http:.*', etc ] ... there is a problem in function (get-file-name)")
+    (format #t "\nFile name  : ~s " file-name)
     
-    ;(format #t "\nCygwin file name : ~s " file-name-cyqwin)
-    ;(format #t "\nLinux file name  : ~s " file-name-linux)
     (cond
      ((equal? (request-path request) '("hello"))
       (values '((content-type . (text/plain))) "Hello there!"))
      ((equal? (request-path request) '("quit"))
       (values '((content-type . (text/plain))) "Try to quit!"))
-     ((file-exists? file-name-linux)
+     ((file-exists? file-name)
       (let* ((mime-type (mime-type-ref (uri->string (request-uri request))))
 	     (mime-type-symbol (mime-type-symbol mime-type)))
 	(if (text-mime-type? mime-type)
 	    (values
 	     `((content-type . (,mime-type-symbol)))
 	     (lambda (out-port)
-	       (call-with-input-file file-name-linux
+	       (call-with-input-file file-name
 		 (lambda (in-port)
 		   (display (read-delimited "" in-port)
 			    out-port)))))
 	    (values
 	     `((content-type . (,mime-type-symbol)))
-	     (call-with-input-file file-name-linux
-	       (lambda (in-port)
-		 (get-bytevector-all in-port)))))))
-     ((file-exists? file-name-cyqwin)
-      (let* ((mime-type (mime-type-ref (uri->string (request-uri request))))
-	     (mime-type-symbol (mime-type-symbol mime-type)))
-	(if (text-mime-type? mime-type)
-	    (values
-	     `((content-type . (,mime-type-symbol)))
-	     (lambda (out-port)
-	       (call-with-input-file file-name-cyqwin
-		 (lambda (in-port)
-		   (display (read-delimited "" in-port)
-			    out-port)))))
-	    (values
-	     `((content-type . (,mime-type-symbol)))
-	     (call-with-input-file file-name-cyqwin
+	     (call-with-input-file file-name
 	       (lambda (in-port)
 		 (get-bytevector-all in-port)))))))
      (else (code-404 request)))))

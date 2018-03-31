@@ -27,9 +27,24 @@ in terminal:
 
 in browser:
 
-    localhost:8080/Apple.png      ->    displays the apple image
-    localhost:8080/index.htm      ->    displays the html page
-    localhost:8080/duude          ->    says: "Hello duude"
+    localhost:8080/Apple.png       ->    displays the apple image
+    localhost:8080/index.html      ->    displays the html page
+    localhost:8080/Hello           ->    says: "Hello"
 
 Have fun!!
-    
+
+
+TODO:
+
+     - make the server stop ( admin custom request )
+       (this is the hardest todo)
+
+     - make possible to create new custom requests
+     more easily ... (maybe in external files, like CGI scripts)
+
+
+     - learn something about security
+     - learn something about passwords and authentification
+     
+Note: project is very young (and a compilation of code found on internet)
+     -- do not expect much -- :P :D :)
