@@ -1,5 +1,6 @@
 (add-to-load-path (dirname (current-filename)))
-
+;;with emacs & geiser
+;;(add-to-load-path "YOUR PATH HERE")
 (use-modules (web server)
 	     (web request)
 	     (web response)
@@ -9,19 +10,23 @@
 	     (ice-9 rdelim)
 	     (ice-9 binary-ports)
 	     (ice-9 format)
-	     (mimety))
+	     (mimety)
+	     (query_parser))
+
+(define (remove-from-string str regex)
+  (if (equal? (string-match regex str) #f)
+      str
+      (regexp-substitute #f (string-match regex str) 'pre "" 'post)))
 
 (define (request-path request)
   (split-and-decode-uri-path (uri-path (request-uri request))))
 
 
 (define (request-query-string request)
-  (split-and-decode-uri-path (uri-query (request-uri request))))
+  (if (uri-query (request-uri request))
+      (split-and-decode-uri-path (uri-query (request-uri request)))
+      '("null=null")))
 
-(define (revove-from-string str regex)
-  (if (equal? (string-match regex str) #f)
-      str
-      (regexp-substitute #f (string-match regex str) 'pre "" 'post)))
 
 (define (code-404 request)
   (values (build-response #:code 404)
@@ -35,11 +40,11 @@
 					; Unix , Cygwin and others .. are 'Hail Mary' cases :D
 (define (get-file-name request)
   (cond ((not (equal? (string-match "[Ll][Ii][Nn][Uu][Xx]" (utsname:sysname (uname))) #f))
-	 (revove-from-string (uri->string (request-uri request)) "/"))
+	 (remove-from-string (uri->string (request-uri request)) "/"))
 	((not (equal? (string-match "[Uu][Nn][Ii][Xx]" (utsname:sysname (uname))) #f))
-	 (revove-from-string (uri->string (request-uri request)) "/"))
+	 (remove-from-string (uri->string (request-uri request)) "/"))
 	((not (equal? (string-match "[Cc][Yy][Gg][Ww][Ii][Nn]" (utsname:sysname (uname))) #f))
-	 (revove-from-string (uri->string (request-uri request)) "http.?:/"))
+	 (remove-from-string (uri->string (request-uri request)) "http.?:/"))
 	(else (uri->string (request-uri request)))))
 	 
 (define (handle-custom-requests request body)
@@ -51,7 +56,11 @@
     
     (cond
      ((equal? (request-path request) '("hello"))
-      (values '((content-type . (text/plain))) "Hello there!"))
+      (let ((query-table (get-query-as-hashtable (car (request-query-string request)))))
+	(cond ((not (hash-ref query-table "name"))
+	       (values '((content-type . (text/plain))) "Hello, stranger !!!"))
+	      (else
+	       (values '((content-type . (text/plain))) (string-append "Hello, " (hash-ref query-table "name") "!!!"))))))
      ((equal? (request-path request) '("quit"))
       (values '((content-type . (text/plain))) "Try to quit!"))
      ((file-exists? file-name)
